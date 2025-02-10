@@ -1,0 +1,118 @@
+specification {
+  element actor
+  element system
+  element component
+}
+
+model {
+  ui = actor 'UI' {
+    description 'Некий веб-интерфейс'
+    style {
+      shape person
+      color muted
+    }
+  }
+
+  api = system 'API gateway' {
+    technology 'go, docker'
+    description 'Маршрутизация запросов'
+    
+  }
+  
+  ui -> api 'REST API'
+
+  users = system 'Сервис пользователей' {
+    technology 'python, docker'
+    description 'Регистрация и аутентификация пользователей'
+    users_backend = system 'Некоторая логика обработки'
+    users_db = system 'БД пользователей' {
+        technology 'Postgres'
+        description 'Хранение информации о пользователях'
+        style {
+            shape storage
+            icon tech:postgresql
+        }
+    }
+  }
+
+  users_backend -> users_db
+
+  api -> users_backend 'HTTPS\n[Аутентификация]'
+
+  stats = system 'Сервис статистики' {
+    technology 'python, docker'
+    description 'Подсчёт лайков, просмотров, комментариев'
+
+    stats_backend = system 'Некоторая логика обработки'
+
+    stats_db = system 'БД статистики' {
+        technology 'ClickHouse'
+        description 'Хранение статистики'
+        style {
+            shape storage
+            icon https://avatars.githubusercontent.com/u/54801242?s=200&v=4
+        }
+    }
+  }
+  
+  api -> stats_backend 'HTTPS\n[Обработка статистики]'
+
+  stats_backend -> stats_db
+  
+  posts = system 'Сервис событий' {
+    technology 'go, docker'
+    description 'Отслеживание постов и комментариев в сети'
+
+    posts_backend = system 'Некоторая логика обработки'
+
+    posts_db = system 'БД событий' {
+        technology 'Apache Cassandra/Postgres'
+        description 'Хранение информации о постах и комментариях'
+        style {
+            shape storage
+            icon tech:cassandra
+        }
+    }
+  }
+
+  que = system 'Брокер сообщений' {
+    technology 'RabbitMG/Apache Kafka'
+    description 'Передача сообщений в сервис статистики от сервиса событий'
+    style {
+        shape queue
+        icon tech:rabbitmq
+    }
+  }
+
+  api -> posts_backend 'HTTPS\n[Обработка событий]'
+
+  posts_backend -> posts_db
+
+  posts_backend -> que 'Передача статистики'
+
+  que -> stats_backend 'Обработка статистики'
+}
+
+views {
+  view index {
+    title 'SocialNetwork'
+
+    include *
+  }
+
+  view of api {
+    include *
+  }
+
+  view of users {
+    include *
+  }
+
+  view of posts {
+    include *
+  }
+
+  view of stats {
+    include *
+  }
+}
