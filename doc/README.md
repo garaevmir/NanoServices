@@ -19,7 +19,6 @@ erDiagram
         uuid role_id FK "Идентификатор роли"
         string username "Уникальное имя пользователя"
         string password_hash "Хэш пароля"
-        string email "Электронная почта"
         datetime created_at "Дата регистрации"
         datetime updated_at "Дата обновления профиля"
     }
@@ -37,6 +36,8 @@ erDiagram
         uuid user_id FK "Ссылка на пользователя"
         string first_name "Имя"
         string last_name "Фамилия"
+        string email "Электронная почта"
+        datetime birthdate "день рождения"
         text bio "Информация о пользователе"
         datetime created_at "Дата создания профиля"
     }
@@ -67,7 +68,7 @@ erDiagram
         datetime created_at "Дата создания"
         datetime updated_at "Дата обновления"
     }
-    
+
     COMMENT_REPLIES {
         uuid id PK "Идентификатор ответа"
         uuid parent_comment_id FK "Идентификатор основного комментария"
@@ -135,44 +136,4 @@ erDiagram
     USER_STATISTICS ||--|| EVENT_LOGS : ""
 
     POST_STATISTICS ||--|| EVENT_LOGS : ""
-```
-
-### Сервис маршрутизации запросов
-
-```mermaid
-erDiagram
-    API_ENDPOINTS {
-        uuid id PK "Идентификатор эндпоинта"
-        string path "URL-путь эндпоинта (например, /users)"
-        string method "HTTP метод (GET, POST, и т.д.)"
-        string service "Имя сервиса-назначения (куда направляется запрос)"
-        string description "Описание назначения эндпоинта"
-        datetime created_at "Дата создания записи"
-        datetime updated_at "Дата обновления записи"
-    }
-    
-    API_LOGS {
-        uuid id PK "Идентификатор лога"
-        uuid endpoint_id FK "Ссылка на API_ENDPOINTS (какому эндпоинту принадлежит запрос)"
-        uuid session_id FK "Ссылка на API_SESSIONS (при наличии)"
-        string method "HTTP метод запроса"
-        int response_status "HTTP статус ответа"
-        datetime timestamp "Время запроса"
-        string message "Сообщение лога (детали запроса/ошибки)"
-    }
-    
-    API_SESSIONS {
-        uuid id PK "Идентификатор сессии"
-        uuid user_id "Идентификатор пользователя, создавшего сессию"
-        string session_token "Токен сессии для аутентификации"
-        datetime created_at "Дата начала сессии"
-        datetime expires_at "Дата истечения сессии"
-        string user_agent "User Agent клиента (информация о браузере/устройстве)"
-    }
-    
-    API_ENDPOINTS ||--|| API_LOGS : ""
-
-    API_SESSIONS ||--|| API_LOGS : ""
-
-
 ```

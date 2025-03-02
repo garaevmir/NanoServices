@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_SERVICE_URL=http://users_service:8081
+    depends_on:
+      - users_service
+    networks:
+      - internal
+
+  users_service:
+    build: ./users_service
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=users_db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=user_db
+    depends_on:
+      - users_db
+    networks:
+      - internal
+
+  users_db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_db
+    volumes:
+      - ./users_service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - internal
+
+networks:
+  internal:
