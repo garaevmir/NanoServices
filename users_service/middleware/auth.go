@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Function for a authentication of a user by token
 func JWTAuth(secret string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
