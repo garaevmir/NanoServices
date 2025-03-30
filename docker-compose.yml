@@ -27,6 +27,21 @@ services:
     networks:
       - internal
 
+  events_service:
+    build: ./events_service
+    ports:
+      - "50051:50051"
+    environment:
+      - DB_HOST=events_db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=events_db
+    depends_on:
+      - events_db
+    networks:
+      - internal
+
   users_db:
     image: postgres:13
     environment:
@@ -35,6 +50,17 @@ services:
       POSTGRES_DB: user_db
     volumes:
       - ./users_service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - internal
+
+  events_db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: events_db
+    volumes:
+      - ./events_service/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - internal
 

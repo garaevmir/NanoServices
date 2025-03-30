@@ -43,12 +43,12 @@ func main() {
 	repo := repository.NewRepository(pool)
 	handlers := handlers.NewHandlers(repo, os.Getenv("JWT_SECRET"))
 
-	e.POST("/register", handlers.Register)
-	e.POST("/login", handlers.Login)
+	e.POST("/api/register", handlers.Register)
+	e.POST("/api/login", handlers.Login)
 	api := e.Group("")
 	api.Use(authMiddleware.JWTAuth(os.Getenv("JWT_SECRET")))
-	api.GET("/profile", handlers.Profile)
-	api.POST("/profile", handlers.UpdateProfile)
+	api.GET("/api/profile", handlers.Profile)
+	api.POST("/api/profile", handlers.UpdateProfile)
 
 	s := &http.Server{
 		Addr: ":8081",
