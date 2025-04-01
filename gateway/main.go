@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	authMiddleware "github.com/nanoservices/gateway/middleware"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -23,21 +25,35 @@ func main() {
 
 	userServiceURL := os.Getenv("USER_SERVICE_URL")
 
-	e.POST("/register", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/register")
+	e.POST("/api/register", func(c echo.Context) error {
+		return proxyRequest(c, userServiceURL+"/api/register")
 	})
 
-	e.POST("/login", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/login")
+	e.POST("/api/login", func(c echo.Context) error {
+		return proxyRequest(c, userServiceURL+"/api/login")
 	})
 
-	e.GET("/profile", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/profile")
+	e.GET("/api/profile", func(c echo.Context) error {
+		return proxyRequest(c, userServiceURL+"/api/profile")
 	})
 
-	e.POST("/profile", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/profile")
+	e.POST("/api/profile", func(c echo.Context) error {
+		return proxyRequest(c, userServiceURL+"/api/profile")
 	})
+	initGRPC()
+
+	apiGroup := e.Group("")
+	apiGroup.Use(authMiddleware.JWTAuth(os.Getenv("JWT_SECRET")))
+
+	apiGroup.POST("/api/posts", CreatePost)
+
+	apiGroup.GET("/api/posts/:id", GetPost)
+
+	apiGroup.PUT("/api/posts/:id", UpdatePost)
+
+	apiGroup.DELETE("/api/posts/:id", DeletePost)
+
+	apiGroup.GET("/api/posts_list", ListPosts)
 
 	s := &http.Server{
 		Addr: ":8080",

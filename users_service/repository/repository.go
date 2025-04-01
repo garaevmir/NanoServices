@@ -41,7 +41,10 @@ func (r *Repository) CreateRole(ctx context.Context, name, description string) (
 }
 
 func (r *Repository) GetRoleByName(ctx context.Context, name string) (models.Role, error) {
-	query := `SELECT id, name, description, created_at, updated_at FROM roles WHERE name = $1`
+	query := `
+	SELECT id, name, description, created_at, updated_at 
+	FROM roles 
+	WHERE name = $1`
 	row := r.pool.QueryRow(ctx, query, name)
 
 	var role models.Role
@@ -66,7 +69,10 @@ func (r *Repository) CreateUser(ctx context.Context, username, passwordHash, rol
 }
 
 func (r *Repository) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
-	query := `SELECT id, role_id, username, password_hash, created_at, updated_at FROM users WHERE username = $1`
+	query := `
+		SELECT id, role_id, username, password_hash, created_at, updated_at 
+		FROM users 
+		WHERE username = $1`
 	row := r.pool.QueryRow(ctx, query, username)
 
 	var user models.User
@@ -92,7 +98,10 @@ func (r *Repository) CreateProfile(ctx context.Context, userID, firstName, lastN
 }
 
 func (r *Repository) GetProfileByUserID(ctx context.Context, userID string) (models.UserProfile, error) {
-	query := `SELECT id, user_id, first_name, last_name, email, birthdate, phone_number, bio, created_at FROM user_profiles WHERE user_id = $1`
+	query := `
+		SELECT id, user_id, first_name, last_name, email, birthdate, phone_number, bio, created_at 
+		FROM user_profiles 
+		WHERE user_id = $1`
 	row := r.pool.QueryRow(ctx, query, userID)
 
 	var profile models.UserProfile
