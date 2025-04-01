@@ -27,3 +27,6 @@ go.work.sum
 __pycache__
 .pytest_cache
 .coverage
+
+generated
+coverage.*

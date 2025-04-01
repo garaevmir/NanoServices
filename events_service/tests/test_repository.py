@@ -75,3 +75,27 @@ async def test_list_posts():
     assert total == 10
     assert "LIMIT $1 OFFSET $2" in mock_pool.fetch.call_args[0][0]
     assert mock_pool.fetch.call_args[0][1:3] == (5, 5)
+
+@pytest.mark.asyncio
+async def test_delete_post():
+    mock_pool = AsyncMock()
+    mock_pool.execute.return_value = "DELETE 1"
+    repo = PostRepository(mock_pool)
+    
+    result = await repo.delete_post("post123", "user123")
+    
+    sql = mock_pool.execute.call_args[0][0]
+    assert "DELETE FROM posts WHERE id = $1 AND user_id = $2" in sql
+    assert mock_pool.execute.call_args[0][1:] == ("post123", "user123")
+    
+    assert result is True
+
+@pytest.mark.asyncio
+async def test_delete_post_not_found():
+    mock_pool = AsyncMock()
+    mock_pool.execute.return_value = "DELETE 0"
+    repo = PostRepository(mock_pool)
+    
+    result = await repo.delete_post("invalid_id", "user123")
+    
+    assert result is False

@@ -19,11 +19,11 @@ RUN python -m grpc_tools.protoc \
     --grpc_python_out=generated \
     proto/post.proto
 
-COPY events_service.py .
+COPY events_server.py .
 COPY repository.py .
 
 RUN sed -i 's/import post_pb2/from generated import post_pb2/' generated/post_pb2_grpc.py
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "events_service.py"]
+CMD ["python", "events_server.py"]
