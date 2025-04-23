@@ -51,7 +51,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create profile"})
 	}
 
-	return c.JSON(http.StatusCreated, map[string]string{"message": "User registered successfully"})
+	return c.JSON(http.StatusCreated, map[string]string{"message": "User registered successfully", "id": userID})
 }
 
 func (h *UserHandler) Login(c echo.Context) error {
