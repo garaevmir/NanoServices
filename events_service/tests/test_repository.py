@@ -99,3 +99,48 @@ async def test_delete_post_not_found():
     result = await repo.delete_post("invalid_id", "user123")
     
     assert result is False
+
+@pytest.mark.asyncio
+async def test_add_comment():
+    mock_pool = AsyncMock()
+    repo = PostRepository(mock_pool)
+    
+    test_data = {
+        "post_id": "p1",
+        "user_id": "u1",
+        "content": "test"
+    }
+    
+    await repo.add_comment(**test_data)
+    
+    sql = mock_pool.fetchrow.call_args[0][0]
+    assert "INSERT INTO comments" in sql
+    assert mock_pool.fetchrow.call_args[0][1:] == (
+        test_data["post_id"],
+        test_data["user_id"],
+        test_data["content"]
+    )
+
+@pytest.mark.asyncio
+async def test_get_comments():
+    mock_pool = AsyncMock()
+    mock_pool.fetch.return_value = [{"id": "c1"}, {"id": "c2"}]
+    repo = PostRepository(mock_pool)
+    
+    comments = await repo.get_comments("p1", 2, 10)
+    
+    sql = mock_pool.fetch.call_args[0][0]
+    assert "WHERE post_id = $1" in sql
+    assert mock_pool.fetch.call_args[0][1:] == ("p1", 10, 10)
+
+@pytest.mark.asyncio
+async def test_get_total_comments():
+    mock_pool = AsyncMock()
+    mock_pool.fetchval.return_value = 5
+    repo = PostRepository(mock_pool)
+    
+    total = await repo.get_total_comments("p1")
+    
+    sql = mock_pool.fetchval.call_args[0][0]
+    assert "COUNT(*) FROM comments" in sql
+    assert mock_pool.fetchval.call_args[0][1] == "p1"

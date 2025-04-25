@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from grpc import StatusCode
 import asyncpg
 
-from events_server import PostService
+from events_service import PostService
 from generated import post_pb2
 
 @pytest.fixture
@@ -220,3 +220,77 @@ async def test_update_post_exception(post_service, mock_context):
     mock_context.set_code.assert_called_with(StatusCode.INTERNAL)
     mock_context.set_details.assert_called_with("Error: DB Error")
     assert response == post_pb2.PostResponse()
+
+@pytest.mark.asyncio
+async def test_view_post_success(post_service, mock_context):
+    post_service._send_kafka_event = AsyncMock()
+    request = post_pb2.ViewPostRequest(post_id="1", user_id="user1")
+    
+    response = await post_service.ViewPost(request, mock_context)
+    
+    assert response.success is True
+    post_service._send_kafka_event.assert_called_with(
+        "post_views", "user1", "1", None
+    )
+
+@pytest.mark.asyncio
+async def test_like_post_success(post_service, mock_context):
+    post_service._send_kafka_event = AsyncMock()
+    request = post_pb2.LikePostRequest(post_id="1", user_id="user1")
+    
+    response = await post_service.LikePost(request, mock_context)
+    
+    assert response.success is True
+    post_service._send_kafka_event.assert_called_with(
+        "post_likes", "user1", "1", None
+    )
+
+@pytest.mark.asyncio
+async def test_comment_post_success(post_service, mock_context):
+    mock_comment = {"id": "c1", "content": "test"}
+    post_service.repo.add_comment = AsyncMock(return_value=mock_comment)
+    post_service._send_kafka_event = AsyncMock()
+    
+    request = post_pb2.CommentPostRequest(
+        post_id="1", 
+        user_id="user1", 
+        content="test"
+    )
+    
+    response = await post_service.CommentPost(request, mock_context)
+    
+    assert response.comment_id == "c1"
+    post_service._send_kafka_event.assert_called_with(
+        "post_comments", "user1", "1", "test"
+    )
+
+@pytest.mark.asyncio
+async def test_get_comments_success(post_service, mock_context):
+    mock_comments = [
+        {"id": "c1", "content": "test1", "user_id": "user1", "created_at": datetime.datetime.now()},
+        {"id": "c2", "content": "test2", "user_id": "user2", "created_at": datetime.datetime.now()}
+    ]
+    post_service.repo.get_comments = AsyncMock(return_value=mock_comments)
+    post_service.repo.get_total_comments = AsyncMock(return_value=2)
+    
+    request = post_pb2.GetCommentsRequest(
+        post_id="1", 
+        page=1, 
+        page_size=10, 
+        user_id="user1"
+    )
+    
+    response = await post_service.GetComments(request, mock_context)
+    
+    assert len(response.comments) == 2
+    assert response.total == 2
+
+@pytest.mark.asyncio
+async def test_send_kafka_event_error(post_service, mock_context):
+    post_service.kafka.send = AsyncMock(side_effect=Exception("Kafka error"))
+    request = post_pb2.ViewPostRequest(post_id="1", user_id="user1")
+    
+    response = await post_service.ViewPost(request, mock_context)
+    
+    assert response.success is True
+    assert "Kafka error" in str(post_service.kafka.send.call_args)
