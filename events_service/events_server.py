@@ -18,11 +18,18 @@ class PostService(post_pb2_grpc.PostServiceServicer):
 
     async def ViewPost(self, request, context):
         logger.info("ViewPost request for post_id: %s", request.post_id)
-        await self._send_kafka_event("post_views", request.user_id, request.post_id)
+        try:
+            await self._send_kafka_event("post_views", request.user_id, request.post_id)
+        except Exception as e:
+            logger.error("Kafka error: %s", str(e))
         return post_pb2.InteractionResponse(success=True)
 
     async def LikePost(self, request, context):
-        await self._send_kafka_event("post_likes", request.user_id, request.post_id)
+        logger.info("LikePost request for post_id: %s", request.post_id)
+        try:
+            await self._send_kafka_event("post_likes", request.user_id, request.post_id)
+        except Exception as e:
+            logger.error("Kafka error: %s", str(e))
         return post_pb2.InteractionResponse(success=True)
 
     async def CommentPost(self, request, context):

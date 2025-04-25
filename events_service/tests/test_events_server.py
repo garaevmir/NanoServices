@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from grpc import StatusCode
 import asyncpg
 
-from events_service import PostService
+from events_server import PostService
 from generated import post_pb2
 
 @pytest.fixture
@@ -12,8 +12,12 @@ def mock_pool():
     return MagicMock(spec=asyncpg.Pool)
 
 @pytest.fixture
-def post_service(mock_pool):
-    return PostService(mock_pool)
+def mock_kafka_producer():
+    return MagicMock()
+
+@pytest.fixture
+def post_service(mock_pool, mock_kafka_producer):
+    return PostService(mock_pool, mock_kafka_producer)
 
 @pytest.fixture
 def mock_context():
@@ -230,7 +234,7 @@ async def test_view_post_success(post_service, mock_context):
     
     assert response.success is True
     post_service._send_kafka_event.assert_called_with(
-        "post_views", "user1", "1", None
+        "post_views", "user1", "1"
     )
 
 @pytest.mark.asyncio
@@ -242,7 +246,7 @@ async def test_like_post_success(post_service, mock_context):
     
     assert response.success is True
     post_service._send_kafka_event.assert_called_with(
-        "post_likes", "user1", "1", None
+        "post_likes", "user1", "1"
     )
 
 @pytest.mark.asyncio
@@ -287,10 +291,12 @@ async def test_get_comments_success(post_service, mock_context):
 
 @pytest.mark.asyncio
 async def test_send_kafka_event_error(post_service, mock_context):
-    post_service.kafka.send = AsyncMock(side_effect=Exception("Kafka error"))
+    post_service._send_kafka_event = AsyncMock(side_effect=Exception("Kafka error"))
     request = post_pb2.ViewPostRequest(post_id="1", user_id="user1")
     
     response = await post_service.ViewPost(request, mock_context)
     
     assert response.success is True
-    assert "Kafka error" in str(post_service.kafka.send.call_args)
+    post_service._send_kafka_event.assert_called_with(
+        "post_views", "user1", "1"
+    )
