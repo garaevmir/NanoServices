@@ -175,6 +175,83 @@ func handleGRPCError(c echo.Context, err error) error {
 			map[string]string{"error": "invalid arguments"})
 	default:
 		return c.JSON(http.StatusInternalServerError,
-			map[string]string{"error": "internal server error"})
+			map[string]string{"error": err.Error()})
 	}
+}
+
+func ViewPost(c echo.Context) error {
+	userID := c.Get("user_id").(string)
+	postID := c.Param("id")
+	log.Print(postID)
+
+	res, err := postClient.ViewPost(c.Request().Context(), &pb.ViewPostRequest{
+		PostId: postID,
+		UserId: userID,
+	})
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+	return c.JSON(http.StatusOK, res)
+}
+
+func LikePost(c echo.Context) error {
+	userID := c.Get("user_id").(string)
+	postID := c.Param("id")
+
+	res, err := postClient.LikePost(c.Request().Context(), &pb.LikePostRequest{
+		PostId: postID,
+		UserId: userID,
+	})
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+	return c.JSON(http.StatusOK, res)
+}
+
+func CommentPost(c echo.Context) error {
+	userID := c.Get("user_id").(string)
+	postID := c.Param("id")
+
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	res, err := postClient.CommentPost(c.Request().Context(), &pb.CommentPostRequest{
+		PostId:  postID,
+		UserId:  userID,
+		Content: req.Content,
+	})
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+	return c.JSON(http.StatusCreated, res)
+}
+
+func GetComments(c echo.Context) error {
+	userID := c.Get("user_id").(string)
+	postID := c.Param("id")
+
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page < 1 {
+		page = 1
+	}
+
+	pageSize, _ := strconv.Atoi(c.QueryParam("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	res, err := postClient.GetComments(c.Request().Context(), &pb.GetCommentsRequest{
+		PostId:   postID,
+		Page:     int32(page),
+		PageSize: int32(pageSize),
+		UserId:   userID,
+	})
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+	return c.JSON(http.StatusOK, res)
 }

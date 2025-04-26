@@ -42,6 +42,30 @@ services:
     networks:
       - internal
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    networks: [internal]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on: [zookeeper]
+    networks: [internal]
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    ports: ["9092:9092"]
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports: ["8082:8080"]
+    depends_on: [kafka]
+    networks: [internal]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
   users_db:
     image: postgres:13
     environment:

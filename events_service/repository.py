@@ -76,6 +76,29 @@ class PostRepository:
         total = await self.pool.fetchval("SELECT COUNT(*) FROM posts")
         print("sended", file=sys.stderr)
         return posts, total
+    
+    async def add_comment(self, post_id: str, user_id: str, content: str):
+        query = """
+            INSERT INTO comments (post_id, user_id, content, created_at)
+            VALUES ($1, $2, $3, NOW())
+            RETURNING *
+        """
+        return await self.pool.fetchrow(query, post_id, user_id, content)
+
+    async def get_comments(self, post_id: str, page: int, page_size: int):
+        offset = (page - 1) * page_size
+        query = """
+            SELECT * FROM comments
+            WHERE post_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+        """
+        return await self.pool.fetch(query, post_id, page_size, offset)
+
+    async def get_total_comments(self, post_id: str):
+        return await self.pool.fetchval(
+            "SELECT COUNT(*) FROM comments WHERE post_id = $1", post_id
+        )
 
 async def create_pool(dsn: str) -> asyncpg.Pool:
     return await asyncpg.create_pool(dsn=dsn)

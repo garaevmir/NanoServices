@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,12 +14,24 @@ import (
 	"time"
 
 	authMiddleware "github.com/nanoservices/gateway/middleware"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
+var kafkaWriter *kafka.Writer
+
+func initKafka() {
+	kafkaWriter = kafka.NewWriter(kafka.WriterConfig{
+		Brokers: []string{"kafka:9092"},
+		Topic:   "user_registrations",
+	})
+}
+
 func main() {
+	initKafka()
+	defer kafkaWriter.Close()
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -26,19 +39,46 @@ func main() {
 	userServiceURL := os.Getenv("USER_SERVICE_URL")
 
 	e.POST("/api/register", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/api/register")
+		body, statusCode, err := proxyRequest(c, userServiceURL+"/api/register")
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Internal server error")
+		}
+
+		var resp map[string]interface{}
+		if err := json.Unmarshal(body, &resp); err != nil {
+			log.Printf("Failed to parse response: %v", err)
+			return c.String(http.StatusInternalServerError, "Invalid response format")
+		}
+
+		userID, ok := resp["id"].(string)
+		if !ok {
+			log.Printf("Missing 'id' in response: %v", resp)
+			return c.String(http.StatusInternalServerError, "User ID not found")
+		}
+
+		msg := fmt.Sprintf(`{"user_id": "%s", "timestamp": "%s"}`,
+			userID, time.Now().Format(time.RFC3339))
+		if err := kafkaWriter.WriteMessages(context.Background(),
+			kafka.Message{Value: []byte(msg)}); err != nil {
+			log.Printf("Failed to send Kafka message: %v", err)
+		}
+
+		return c.String(statusCode, string(body))
 	})
 
 	e.POST("/api/login", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/api/login")
+		body, statusCode, _ := proxyRequest(c, userServiceURL+"/api/login")
+		return c.String(statusCode, string(body))
 	})
 
 	e.GET("/api/profile", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/api/profile")
+		body, statusCode, _ := proxyRequest(c, userServiceURL+"/api/profile")
+		return c.String(statusCode, string(body))
 	})
 
 	e.POST("/api/profile", func(c echo.Context) error {
-		return proxyRequest(c, userServiceURL+"/api/profile")
+		body, statusCode, _ := proxyRequest(c, userServiceURL+"/api/profile")
+		return c.String(statusCode, string(body))
 	})
 	initGRPC()
 
@@ -54,6 +94,10 @@ func main() {
 	apiGroup.DELETE("/api/posts/:id", DeletePost)
 
 	apiGroup.GET("/api/posts_list", ListPosts)
+	apiGroup.POST("/api/posts/view/:id", ViewPost)
+	apiGroup.POST("/api/posts/like/:id", LikePost)
+	apiGroup.POST("/api/posts/comment/:id", CommentPost)
+	apiGroup.GET("/api/posts/comments/:id", GetComments)
 
 	s := &http.Server{
 		Addr: ":8080",
@@ -82,19 +126,22 @@ func main() {
 	}
 }
 
-func proxyRequest(c echo.Context, targetURL string) error {
+func proxyRequest(c echo.Context, targetURL string) ([]byte, int, error) {
 	client := &http.Client{}
 	reqBody, _ := io.ReadAll(c.Request().Body)
-	fmt.Println(string(reqBody))
-	req, _ := http.NewRequest(c.Request().Method, targetURL, bytes.NewBuffer(reqBody))
-	req.Header = c.Request().Header
+	req, _ := http.NewRequest(
+		c.Request().Method,
+		targetURL,
+		bytes.NewBuffer(reqBody),
+	)
+	req.Header = c.Request().Header.Clone()
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error proxying request")
+		return nil, 0, fmt.Errorf("proxy error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	return c.String(resp.StatusCode, string(body))
+	return body, resp.StatusCode, nil
 }

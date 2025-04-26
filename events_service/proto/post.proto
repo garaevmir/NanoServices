@@ -8,6 +8,10 @@ service PostService {
   rpc UpdatePost(UpdatePostRequest) returns (PostResponse);
   rpc GetPost(GetPostRequest) returns (PostResponse);
   rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+  rpc ViewPost(ViewPostRequest) returns (InteractionResponse);
+  rpc LikePost(LikePostRequest) returns (InteractionResponse);
+  rpc CommentPost(CommentPostRequest) returns (CommentResponse);
+  rpc GetComments(GetCommentsRequest) returns (CommentsResponse);
 }
 
 message CreatePostRequest {
@@ -60,3 +64,42 @@ message ListPostsResponse {
   repeated PostResponse posts = 1;
   int32 total = 2;
 }
+
+message ViewPostRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+message LikePostRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+message CommentPostRequest {
+  string post_id = 1;
+  string user_id = 2;
+  string content = 3;
+}
+
+message GetCommentsRequest {
+  string post_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  string user_id = 4;
+}
+
+message Comment {
+  string id = 1;
+  string content = 2;
+  string user_id = 3;
+  string created_at = 4;
+}
+
+message CommentsResponse {
+  repeated Comment comments = 1;
+  int32 total = 2;
+}
+
+message InteractionResponse { bool success = 1; }
+
+message CommentResponse { string comment_id = 1; }
