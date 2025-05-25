@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	pb "github.com/nanoservices/gateway/generated"
@@ -254,4 +255,147 @@ func GetComments(c echo.Context) error {
 		return handleGRPCError(c, err)
 	}
 	return c.JSON(http.StatusOK, res)
+}
+
+var statsClient pb.StatsServiceClient
+
+func initStatsGRPC() {
+	conn, err := grpc.NewClient(
+		"stats_service:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create stats client: %v", err)
+	}
+	statsClient = pb.NewStatsServiceClient(conn)
+}
+
+func GetPostStats(c echo.Context) error {
+	postID := c.Param("id")
+
+	res, err := statsClient.GetPostStats(c.Request().Context(), &pb.PostStatsRequest{
+		PostId: postID,
+	})
+
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"views":    res.Views,
+		"likes":    res.Likes,
+		"comments": res.Comments,
+	})
+}
+
+func GetViewsTrend(c echo.Context) error {
+	return handleTrendRequest(c, "view")
+}
+
+func GetLikesTrend(c echo.Context) error {
+	return handleTrendRequest(c, "like")
+}
+
+func GetCommentsTrend(c echo.Context) error {
+	return handleTrendRequest(c, "comment")
+}
+
+func handleTrendRequest(c echo.Context, metric string) error {
+	postID := c.Param("id")
+	period := c.QueryParam("period")
+
+	var res *pb.PostTrendResponse
+	var err error
+
+	switch metric {
+	case "view":
+		res, err = statsClient.GetViewsTrend(c.Request().Context(), &pb.PostTrendRequest{
+			PostId: postID,
+			Period: period,
+		})
+	case "like":
+		res, err = statsClient.GetLikesTrend(c.Request().Context(), &pb.PostTrendRequest{
+			PostId: postID,
+			Period: period,
+		})
+	case "comment":
+		res, err = statsClient.GetCommentsTrend(c.Request().Context(), &pb.PostTrendRequest{
+			PostId: postID,
+			Period: period,
+		})
+	default:
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid metric"})
+	}
+
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+
+	response := make([]map[string]interface{}, len(res.Data))
+	for i, item := range res.Data {
+		response[i] = map[string]interface{}{
+			"date":  item.Date,
+			"count": item.Count,
+		}
+	}
+	return c.JSON(http.StatusOK, response)
+}
+
+func GetTopPosts(c echo.Context) error {
+	metric := c.QueryParam("metric")
+
+	var metricEnum pb.Metric
+	switch strings.ToLower(metric) {
+	case "views":
+		metricEnum = pb.Metric_VIEWS
+	case "likes":
+		metricEnum = pb.Metric_LIKES
+	case "comments":
+		metricEnum = pb.Metric_COMMENTS
+	default:
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid metric. Use: views/likes/comments",
+		})
+	}
+
+	res, err := statsClient.GetTopPosts(c.Request().Context(), &pb.TopRequest{
+		Metric: metricEnum,
+	})
+
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, res.Posts)
+}
+
+func GetTopUsers(c echo.Context) error {
+	metric := c.QueryParam("metric")
+	if metric == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "metric parameter is required"})
+	}
+
+	var metricEnum pb.Metric
+	switch strings.ToLower(metric) {
+	case "views":
+		metricEnum = pb.Metric_VIEWS
+	case "likes":
+		metricEnum = pb.Metric_LIKES
+	case "comments":
+		metricEnum = pb.Metric_COMMENTS
+	default:
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid metric. Use: views/likes/comments",
+		})
+	}
+
+	res, err := statsClient.GetTopUsers(c.Request().Context(), &pb.TopRequest{
+		Metric: metricEnum,
+	})
+
+	if err != nil {
+		return handleGRPCError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, res.Users)
 }

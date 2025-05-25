@@ -9,9 +9,13 @@ servers:
 
 tags:
   - name: Authentication
-    description: Методы для регистрации и аутентификации пользователей
+    description: Методы для регистрации и аутентификации
   - name: Profile
-    description: Методы для работы с профилем пользователя
+    description: Управление профилем пользователя
+  - name: Posts
+    description: Работа с постами
+  - name: Interactions
+    description: Взаимодействия с постами (лайки, просмотры, комментарии)
 
 paths:
   /api/register:
@@ -387,6 +391,117 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessMessage"
 
+  /api/posts/view/{id}:
+    post:
+      tags: [Interactions]
+      summary: Зарегистрировать просмотр поста
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Просмотр зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/posts/like/{id}:
+    post:
+      tags: [Interactions]
+      summary: Поставить лайк посту
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Лайк успешно добавлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/posts/comment/{id}:
+    post:
+      tags: [Interactions]
+      summary: Добавить комментарий к посту
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentRequest"
+      responses:
+        "201":
+          description: Комментарий создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/posts/comments/{id}:
+    get:
+      tags: [Interactions]
+      summary: Получить комментарии поста
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        "200":
+          description: Список комментариев
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentsListResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   schemas:
     CreatePostRequest:
@@ -499,6 +614,39 @@ components:
       properties:
         message:
           type: string
+
+    CommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          example: "Отличный пост!"
+
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CommentsListResponse:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentResponse"
+        total:
+          type: integer
+          example: 15
 
   securitySchemes:
     BearerAuth:
