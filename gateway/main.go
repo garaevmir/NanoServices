@@ -100,12 +100,12 @@ func main() {
 	apiGroup.POST("/api/posts/comment/:id", CommentPost)
 	apiGroup.GET("/api/posts/comments/:id", GetComments)
 
-	apiGroup.GET("/stats/posts/:id", GetPostStats)
-	apiGroup.GET("/stats/posts/:id/views/trend", GetViewsTrend)
-	apiGroup.GET("/stats/posts/:id/likes/trend", GetLikesTrend)
-	apiGroup.GET("/stats/posts/:id/comments/trend", GetCommentsTrend)
-	apiGroup.GET("/stats/top/posts", GetTopPosts)
-	apiGroup.GET("/stats/top/users", GetTopUsers)
+	apiGroup.GET("/api/stats/posts/:id", GetPostStats)
+	apiGroup.GET("/api/stats/posts/:id/views/trend", GetViewsTrend)
+	apiGroup.GET("/api/stats/posts/:id/likes/trend", GetLikesTrend)
+	apiGroup.GET("/api/stats/posts/:id/comments/trend", GetCommentsTrend)
+	apiGroup.GET("/api/stats/top/posts", GetTopPosts)
+	apiGroup.GET("/api/stats/top/users", GetTopUsers)
 
 	s := &http.Server{
 		Addr: ":8080",
