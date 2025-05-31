@@ -1,0 +1,62 @@
+syntax = "proto3";
+package stats;
+
+option go_package = "github.com/nanoservices/gateway/generated";
+
+service StatsService {
+  rpc GetPostStats(PostStatsRequest) returns (PostStatsResponse);
+
+  rpc GetViewsTrend(PostTrendRequest) returns (PostTrendResponse);
+  rpc GetLikesTrend(PostTrendRequest) returns (PostTrendResponse);
+  rpc GetCommentsTrend(PostTrendRequest) returns (PostTrendResponse);
+
+  rpc GetTopPosts(TopRequest) returns (TopPostsResponse);
+  rpc GetTopUsers(TopRequest) returns (TopUsersResponse);
+}
+
+message PostStatsRequest { string post_id = 1; }
+
+message PostStatsResponse {
+  uint64 views = 1;
+  uint64 likes = 2;
+  uint64 comments = 3;
+}
+
+message PostTrendRequest {
+  string post_id = 1;
+  string period = 2;
+}
+
+message TrendItem {
+  string date = 1;
+  uint64 count = 2;
+}
+
+message PostTrendResponse { repeated TrendItem data = 1; }
+
+enum Metric {
+  VIEWS = 0;
+  LIKES = 1;
+  COMMENTS = 2;
+}
+
+message TopRequest {
+  Metric metric = 1;
+  string period = 2;
+}
+
+message PostItem {
+  string post_id = 1;
+  string title = 2;
+  uint64 count = 3;
+}
+
+message UserItem {
+  string user_id = 1;
+  string username = 2;
+  uint64 count = 3;
+}
+
+message TopPostsResponse { repeated PostItem posts = 1; }
+
+message TopUsersResponse { repeated UserItem users = 1; }

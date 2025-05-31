@@ -81,6 +81,7 @@ func main() {
 		return c.String(statusCode, string(body))
 	})
 	initGRPC()
+	initStatsGRPC()
 
 	apiGroup := e.Group("")
 	apiGroup.Use(authMiddleware.JWTAuth(os.Getenv("JWT_SECRET")))
@@ -98,6 +99,13 @@ func main() {
 	apiGroup.POST("/api/posts/like/:id", LikePost)
 	apiGroup.POST("/api/posts/comment/:id", CommentPost)
 	apiGroup.GET("/api/posts/comments/:id", GetComments)
+
+	apiGroup.GET("/stats/posts/:id", GetPostStats)
+	apiGroup.GET("/stats/posts/:id/views/trend", GetViewsTrend)
+	apiGroup.GET("/stats/posts/:id/likes/trend", GetLikesTrend)
+	apiGroup.GET("/stats/posts/:id/comments/trend", GetCommentsTrend)
+	apiGroup.GET("/stats/top/posts", GetTopPosts)
+	apiGroup.GET("/stats/top/users", GetTopUsers)
 
 	s := &http.Server{
 		Addr: ":8080",
