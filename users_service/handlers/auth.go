@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -25,6 +26,7 @@ func NewHandlers(repo repository.RepositoryInt, secret string) *UserHandler {
 func (h *UserHandler) Register(c echo.Context) error {
 	var input models.Register
 	if err := c.Bind(&input); err != nil {
+		log.Println("Invalid input")
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
 
@@ -32,22 +34,26 @@ func (h *UserHandler) Register(c echo.Context) error {
 	if err != nil {
 		roleID.ID, err = h.repo.CreateRole(c.Request().Context(), "user", "Default user role")
 		if err != nil {
+			log.Println("Failed to create role")
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create role"})
 		}
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Username+input.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.Println("Failed to create user", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
 	}
 
 	userID, err := h.repo.CreateUser(c.Request().Context(), input.Username, string(hashedPassword), roleID.ID)
 	if err != nil {
+		log.Println("Failed to create user", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
 	}
 
 	_, err = h.repo.CreateProfile(c.Request().Context(), userID, "", "", input.Email, "", "", "")
 	if err != nil {
+		log.Println("Failed to create profile")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create profile"})
 	}
 
